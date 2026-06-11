@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OAuth Flow Debugger</title>
+<style>
+:root {
+  --bg: #f5f0e6;
+  --paper: #fefcf6;
+  --ink: #0c1f33;
+  --ink-soft: #3a4d61;
+  --rule: #c8b896;
+  --navy: #1c3a5e;
+  --navy-deep: #0e2440;
+  --red: #a02020;
+  --red-deep: #781010;
+  --gold: #a07820;
+  --ok: #1a5c2e;
+  --warn: #8a5a00;
+  --err: #8b1a1a;
+  --code-bg: #ebe2cf;
+}
+[data-theme="dark"] {
+  --bg: #0a1525;
+  --paper: #14223a;
+  --ink: #ece8d8;
+  --ink-soft: #b8c0d0;
+  --rule: #3a4860;
+  --navy: #6a92c8;
+  --navy-deep: #88a8d8;
+  --red: #e87878;
+  --red-deep: #f29090;
+  --gold: #d4b070;
+  --ok: #6dd380;
+  --warn: #d4a155;
+  --err: #e88080;
+  --code-bg: #08111e;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: ui-serif, Georgia, "Times New Roman", serif;
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  padding: 2rem 1rem;
+  line-height: 1.55;
+}
+.wrap { max-width: 1100px; margin: 0 auto; }
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid var(--navy);
+  padding-bottom: 1.25rem;
+  margin-bottom: 2rem;
+  position: relative;
+}
+header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -5px;
+  height: 1px;
+  background: var(--navy);
+}
+h1 {
+  font-size: 1.85rem;
+  font-weight: 700;
+  color: var(--navy);
+  letter-spacing: -0.01em;
+}
+[data-theme="dark"] h1 { color: var(--navy); }
+.subtitle {
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+  margin-top: 0.25rem;
+  font-style: italic;
+}
+.theme-btn {
+  background: transparent;
+  border: 1px solid var(--rule);
+  color: var(--ink-soft);
+  padding: 0.4rem 0.85rem;
+  font-size: 0.8rem;
+  font-family: ui-sans-serif, sans-serif;
+  cursor: pointer;
+  border-radius: 2px;
+}
+.theme-btn:hover { border-color: var(--navy); color: var(--navy); }
+.lede {
+  font-size: 0.95rem;
+  margin-bottom: 1.75rem;
+  max-width: 65ch;
+}
+.input-section {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  padding: 1.5rem;
+  margin-bottom: 1.75rem;
+  border-radius: 3px;
+}
+label {
+  display: block;
+  font-family: ui-sans-serif, sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  margin-bottom: 0.5rem;
+}
+textarea {
+  width: 100%;
+  min-height: 100px;
+  background: var(--code-bg);
+  border: 1px solid var(--rule);
+  color: var(--ink);
+  padding: 0.85rem;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  resize: vertical;
+  border-radius: 2px;
+}
+textarea:focus { outline: 2px solid var(--navy); outline-offset: 1px; }
+.btn-row {
+  display: flex;
+  gap: 0.65rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+button {
+  font-family: ui-sans-serif, sans-serif;
+  font-size: 0.85rem;
+  padding: 0.55rem 1.1rem;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  border-radius: 2px;
+}
+button.primary {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: var(--paper);
+  font-weight: 600;
+}
+[data-theme="dark"] button.primary {
+  color: var(--bg) !important;
+}
+button.primary:hover { background: var(--navy-deep); border-color: var(--navy-deep); }
+button:hover { border-color: var(--navy); }
+.results { display: none; }
+.results.show { display: block; }
+.section {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+  border-radius: 3px;
+}
+h2 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--navy);
+}
+[data-theme="dark"] h2 { color: var(--navy); }
+.flow-summary {
+  background: var(--code-bg);
+  padding: 0.85rem 1rem;
+  border-left: 4px solid var(--navy);
+  margin-bottom: 1rem;
+  font-size: 0.92rem;
+  border-radius: 2px;
+}
+.flow-summary strong { color: var(--navy); font-family: ui-sans-serif, sans-serif; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+[data-theme="dark"] .flow-summary strong { color: var(--navy); }
+.params-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+}
+.params-table th {
+  text-align: left;
+  font-family: ui-sans-serif, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+  padding: 0.5rem 0.85rem;
+  border-bottom: 1px solid var(--rule);
+}
+.params-table td {
+  padding: 0.6rem 0.85rem;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+.params-table td:first-child {
+  width: 200px;
+  font-weight: 600;
+  color: var(--navy);
+}
+[data-theme="dark"] .params-table td:first-child { color: var(--navy); }
+.params-table td:nth-child(2) { color: var(--ink); word-break: break-all; }
+.params-table td:nth-child(3) {
+  font-family: ui-serif, Georgia, serif;
+  font-style: italic;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  width: 35%;
+}
+.audit {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.audit li {
+  padding: 0.6rem 0.85rem;
+  margin-bottom: 0.4rem;
+  border-radius: 2px;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+  font-family: ui-sans-serif, sans-serif;
+}
+.audit .ok { background: var(--code-bg); border-left: 4px solid var(--ok); }
+.audit .warn { background: var(--code-bg); border-left: 4px solid var(--warn); }
+.audit .err { background: var(--code-bg); border-left: 4px solid var(--err); }
+.audit-icon {
+  font-weight: 700;
+  font-size: 0.85rem;
+  margin-top: 0.05rem;
+  width: 1.5rem;
+  flex-shrink: 0;
+}
+.audit .ok .audit-icon { color: var(--ok); }
+.audit .warn .audit-icon { color: var(--warn); }
+.audit .err .audit-icon { color: var(--err); }
+.audit-msg { flex: 1; }
+.error-box {
+  background: var(--code-bg);
+  border-left: 4px solid var(--err);
+  padding: 0.85rem 1rem;
+  border-radius: 2px;
+  font-size: 0.9rem;
+  color: var(--err);
+  margin-top: 0.85rem;
+}
+.intro-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.intro-card {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  padding: 1rem 1.25rem;
+  border-radius: 3px;
+  font-size: 0.85rem;
+}
+.intro-card h3 {
+  font-family: ui-sans-serif, sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--red);
+  margin-bottom: 0.5rem;
+}
+[data-theme="dark"] .intro-card h3 { color: var(--red); }
+.intro-card p { color: var(--ink-soft); }
+footer {
+  margin-top: 2.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+}
+footer a { color: var(--navy); text-decoration: none; }
+footer a:hover { text-decoration: underline; }
+@media (max-width: 640px) {
+  body { padding: 1rem 0.75rem; }
+  h1 { font-size: 1.4rem; }
+  .params-table td:first-child { width: auto; display: block; padding-bottom: 0.2rem; border-bottom: none; }
+  .params-table td:nth-child(2), .params-table td:nth-child(3) { display: block; padding-top: 0.2rem; padding-bottom: 0.6rem; }
+  .params-table td:nth-child(3) { width: auto; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <h1>OAuth Flow Debugger</h1>
+    <div class="subtitle">Decode and audit an OAuth 2.0 / OIDC URL</div>
+  </div>
+  <button class="theme-btn" id="theme-toggle" type="button">Dark</button>
+</header>
+
+<p class="lede">Paste any OAuth authorization URL, callback URL, or token-response URL. The tool identifies the flow, decodes the parameters, and flags suspicious or missing values. Useful when integration is failing and the docs aren't telling you which parameter is wrong.</p>
+
+<div class="input-section">
+  <label for="url-input">URL</label>
+  <textarea id="url-input" placeholder="https://accounts.example.com/oauth/authorize?client_id=...&redirect_uri=...&response_type=code&scope=openid+email&state=..." spellcheck="false" autocapitalize="off" autocorrect="off"></textarea>
+  <div class="btn-row">
+    <button class="primary" id="decode-btn" type="button">Decode</button>
+    <button id="sample-auth" type="button">Sample: authorize</button>
+    <button id="sample-callback" type="button">Sample: callback</button>
+    <button id="sample-token" type="button">Sample: token-in-fragment</button>
+    <button id="clear-btn" type="button">Clear</button>
+  </div>
+  <div id="error-box"></div>
+</div>
+
+<div class="results" id="results">
+  <div class="section">
+    <h2>Flow detected</h2>
+    <div class="flow-summary" id="flow-summary"></div>
+  </div>
+
+  <div class="section">
+    <h2>URL components</h2>
+    <table class="params-table" id="components-table">
+      <thead><tr><th>Component</th><th>Value</th><th>Notes</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>Parameters</h2>
+    <table class="params-table" id="params-table">
+      <thead><tr><th>Parameter</th><th>Value</th><th>Notes</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>Audit</h2>
+    <ul class="audit" id="audit-list"></ul>
+  </div>
+</div>
+
+<div class="intro-grid">
+  <div class="intro-card">
+    <h3>What this decodes</h3>
+    <p>OAuth 2.0 authorization endpoints, token endpoints, callback URLs (both code-in-query and token-in-fragment), and OpenID Connect discovery URLs.</p>
+  </div>
+  <div class="intro-card">
+    <h3>What it flags</h3>
+    <p>Insecure redirect URIs, missing state, plain code_challenge, oversized scopes, fragments containing tokens that shouldn't be there, leaked tokens in query strings.</p>
+  </div>
+  <div class="intro-card">
+    <h3>What this isn't</h3>
+    <p>Not a token verifier (use jwt-inspector for that). Not a security audit tool — it catches common mistakes, not novel attacks.</p>
+  </div>
+</div>
+
+<footer>
+  <div>OAuth Flow Debugger. MIT licensed. <a href="https://github.com/0xelitesystem/oauth-flow-debugger" target="_blank" rel="noopener">View source</a>.</div>
+  <div>Decoding happens locally; nothing is sent.</div>
+</footer>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const themeBtn = $("theme-toggle");
+function setTheme(t) {
+  document.documentElement.setAttribute("data-theme", t);
+  themeBtn.textContent = t === "dark" ? "Light" : "Dark";
+}
+themeBtn.addEventListener("click", () => {
+  const cur = document.documentElement.getAttribute("data-theme") || "light";
+  setTheme(cur === "dark" ? "light" : "dark");
+});
+
+const PARAM_NOTES = {
+  client_id: "Public identifier of the OAuth client.",
+  client_secret: "Secret known only to the client and the authorization server. Should NEVER appear in a URL visible to the user.",
+  redirect_uri: "Where the authorization server sends the user after auth. Must exactly match a registered URI.",
+  response_type: "What the client wants back. 'code' = authorization code flow. 'token' = implicit flow (deprecated). 'id_token' = OIDC.",
+  response_mode: "How the response is delivered. 'query', 'fragment', or 'form_post'.",
+  scope: "Space-separated permissions being requested.",
+  state: "Opaque value the client uses to maintain state between request and callback. Used to prevent CSRF.",
+  nonce: "OIDC: random value bound to the ID token to prevent replay.",
+  code_challenge: "PKCE: hash of the code_verifier.",
+  code_challenge_method: "PKCE: how the code_challenge was derived. 'S256' is correct; 'plain' should not be used.",
+  code: "Short-lived authorization code; exchange at token endpoint for an access token.",
+  access_token: "Bearer token used to call APIs. Treat as a credential.",
+  id_token: "OIDC: signed JWT representing the authenticated user.",
+  refresh_token: "Long-lived token used to obtain new access tokens.",
+  token_type: "Usually 'Bearer'.",
+  expires_in: "Lifetime of the access token, in seconds.",
+  error: "Error code returned by the authorization server.",
+  error_description: "Human-readable error description.",
+  error_uri: "URL with more error info.",
+  prompt: "OIDC: 'none', 'login', 'consent', 'select_account'.",
+  login_hint: "Hint to the auth server about the user.",
+  max_age: "OIDC: max acceptable age of authentication, in seconds.",
+  ui_locales: "OIDC: preferred UI languages.",
+  acr_values: "OIDC: requested authentication context.",
+  audience: "Auth0 / RFC 8707: requested resource server.",
+  resource: "RFC 8707: requested resource indicator.",
+  grant_type: "Token endpoint: 'authorization_code', 'refresh_token', 'client_credentials', 'password' (deprecated).",
+  username: "Resource Owner Password Credentials grant. Avoid this grant entirely.",
+  password: "Resource Owner Password Credentials grant. NEVER appears in production OAuth.",
+};
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function decode() {
+  $("error-box").innerHTML = "";
+  const input = $("url-input").value.trim();
+  if (!input) {
+    $("error-box").innerHTML = `<div class="error-box">Paste a URL to decode.</div>`;
+    return;
+  }
+
+  let url;
+  try {
+    url = new URL(input);
+  } catch (e) {
+    $("error-box").innerHTML = `<div class="error-box">Not a valid URL: ${escapeHtml(e.message)}</div>`;
+    return;
+  }
+
+  // Parse query and fragment params
+  const queryParams = new URLSearchParams(url.search);
+  const fragmentParams = new URLSearchParams(url.hash.replace(/^#/, ""));
+
+  // Detect flow
+  const flow = detectFlow(url, queryParams, fragmentParams);
+  $("flow-summary").innerHTML = `<strong>Flow</strong><br>${flow.label}<br><br><strong>Direction</strong><br>${flow.direction}`;
+
+  // Components table
+  const componentsBody = $("components-table").querySelector("tbody");
+  componentsBody.innerHTML = "";
+  const components = [
+    ["Scheme", url.protocol.replace(":", ""), url.protocol === "https:" ? "Secure" : "INSECURE — OAuth requires HTTPS in production."],
+    ["Host", url.host, ""],
+    ["Path", url.pathname, ""],
+    ["Query string", url.search ? url.search.slice(1) : "(none)", url.search ? `${queryParams.size} parameter(s)` : ""],
+    ["Fragment", url.hash ? url.hash.slice(1) : "(none)", url.hash ? `${fragmentParams.size} parameter(s)` : ""],
+  ];
+  for (const [k, v, n] of components) {
+    componentsBody.innerHTML += `<tr><td>${escapeHtml(k)}</td><td>${escapeHtml(v)}</td><td>${escapeHtml(n)}</td></tr>`;
+  }
+
+  // Params table
+  const paramsBody = $("params-table").querySelector("tbody");
+  paramsBody.innerHTML = "";
+  const allParams = [];
+  queryParams.forEach((v, k) => allParams.push([k, v, "query"]));
+  fragmentParams.forEach((v, k) => allParams.push([k, v, "fragment"]));
+  if (allParams.length === 0) {
+    paramsBody.innerHTML = `<tr><td colspan="3" style="font-style: italic; color: var(--ink-soft); text-align: center;">No parameters</td></tr>`;
+  } else {
+    for (const [k, v, src] of allParams) {
+      const note = PARAM_NOTES[k] || "(non-standard parameter)";
+      const srcLabel = src === "fragment" ? ` <em style="color: var(--ink-soft);">(in fragment)</em>` : "";
+      paramsBody.innerHTML += `<tr><td>${escapeHtml(k)}${srcLabel}</td><td>${escapeHtml(v)}</td><td>${escapeHtml(note)}</td></tr>`;
+    }
+  }
+
+  // Audit
+  const audits = audit(url, queryParams, fragmentParams, flow);
+  const auditList = $("audit-list");
+  auditList.innerHTML = "";
+  for (const a of audits) {
+    auditList.innerHTML += `<li class="${a.level}"><span class="audit-icon">${a.level === "ok" ? "OK" : a.level === "warn" ? "!" : "X"}</span><span class="audit-msg">${escapeHtml(a.msg)}</span></li>`;
+  }
+
+  $("results").classList.add("show");
+}
+
+function detectFlow(url, query, fragment) {
+  const path = url.pathname.toLowerCase();
+  const has = (k) => query.has(k) || fragment.has(k);
+
+  if (has("error")) {
+    return { label: "Error response", direction: "Authorization server → client" };
+  }
+  if (fragment.has("access_token") || fragment.has("id_token")) {
+    return { label: "Implicit / hybrid callback (token in fragment)", direction: "Authorization server → client (browser callback)" };
+  }
+  if (query.has("code")) {
+    return { label: "Authorization code callback", direction: "Authorization server → client (browser callback)" };
+  }
+  if (path.includes("authorize") || query.has("response_type")) {
+    return { label: "Authorization request", direction: "Client → authorization server (user is redirected here)" };
+  }
+  if (path.includes("token")) {
+    return { label: "Token endpoint URL", direction: "Client → authorization server (back-channel POST)" };
+  }
+  if (path.includes("/.well-known/openid-configuration") || path.includes("openid-configuration")) {
+    return { label: "OIDC discovery document URL", direction: "Discovery (no params)" };
+  }
+  if (path.includes("/userinfo")) {
+    return { label: "OIDC UserInfo endpoint", direction: "Client → authorization server (with access token)" };
+  }
+  return { label: "Unrecognized — possibly not OAuth, or custom flow", direction: "Unknown" };
+}
+
+function audit(url, query, fragment, flow) {
+  const out = [];
+
+  // HTTPS
+  if (url.protocol === "https:") {
+    out.push({ level: "ok", msg: "HTTPS scheme" });
+  } else if (url.protocol === "http:") {
+    if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
+      out.push({ level: "warn", msg: "HTTP on localhost — okay for local dev, but production must use HTTPS" });
+    } else {
+      out.push({ level: "err", msg: "INSECURE: OAuth must use HTTPS in production" });
+    }
+  } else {
+    out.push({ level: "warn", msg: `Unusual scheme: ${url.protocol}` });
+  }
+
+  // client_secret in URL
+  if (query.has("client_secret") || fragment.has("client_secret")) {
+    out.push({ level: "err", msg: "CRITICAL: client_secret should NEVER appear in a URL visible to the user. If you're sharing this URL, treat the secret as compromised and rotate it." });
+  }
+
+  // password grant
+  if (query.has("password") || fragment.has("password")) {
+    out.push({ level: "err", msg: "CRITICAL: password parameter visible in URL. Resource Owner Password Credentials grant is deprecated; rotate any credentials shared this way." });
+  }
+
+  // state
+  if (flow.label.includes("Authorization request") || flow.label.includes("callback")) {
+    if (!query.has("state") && !fragment.has("state")) {
+      out.push({ level: "warn", msg: "Missing 'state' parameter. The state parameter prevents CSRF; the client should generate a random state and verify it on callback." });
+    } else {
+      const state = query.get("state") || fragment.get("state");
+      if (state.length < 8) {
+        out.push({ level: "warn", msg: `'state' parameter is short (${state.length} chars). Use a high-entropy random value, ideally 32+ chars.` });
+      } else {
+        out.push({ level: "ok", msg: "'state' parameter present" });
+      }
+    }
+  }
+
+  // PKCE
+  if (flow.label.includes("Authorization request")) {
+    if (query.has("code_challenge")) {
+      const method = query.get("code_challenge_method") || "plain";
+      if (method === "S256") {
+        out.push({ level: "ok", msg: "PKCE with S256 — recommended" });
+      } else {
+        out.push({ level: "err", msg: `PKCE code_challenge_method is '${method}'. Use S256, never 'plain' (which provides no protection).` });
+      }
+    } else if (query.get("response_type") === "code") {
+      out.push({ level: "warn", msg: "Authorization code flow without PKCE. PKCE is required for public clients (mobile, SPA) and recommended for confidential clients." });
+    }
+  }
+
+  // implicit flow
+  const responseType = (query.get("response_type") || "").split(/[\s+]+/).filter(Boolean).sort().join(" ");
+  if (responseType === "token" || responseType === "id_token token") {
+    out.push({ level: "warn", msg: "Implicit flow (response_type=token). The implicit flow is deprecated by OAuth 2.1; use authorization code with PKCE instead." });
+  }
+
+  // tokens in URL where they shouldn't be
+  if (query.has("access_token")) {
+    out.push({ level: "err", msg: "CRITICAL: access_token in URL query string. Tokens in query strings leak into server logs, browser history, and referrer headers. Tokens belong in fragments (for browser callbacks) or in headers." });
+  }
+  if (query.has("refresh_token")) {
+    out.push({ level: "err", msg: "CRITICAL: refresh_token in URL. Refresh tokens are long-lived credentials and must never appear in URLs." });
+  }
+
+  // redirect_uri checks
+  const redirectUri = query.get("redirect_uri");
+  if (redirectUri) {
+    try {
+      const r = new URL(redirectUri);
+      if (r.protocol === "http:" && r.hostname !== "localhost" && r.hostname !== "127.0.0.1") {
+        out.push({ level: "err", msg: `redirect_uri uses HTTP for non-localhost host (${r.hostname}). Production redirect URIs must use HTTPS.` });
+      }
+      if (r.hash) {
+        out.push({ level: "warn", msg: "redirect_uri contains a fragment. This is unusual; some auth servers strip fragments." });
+      }
+    } catch (e) {
+      out.push({ level: "err", msg: `redirect_uri is not a valid URL: ${e.message}` });
+    }
+  }
+
+  // scope
+  const scope = query.get("scope");
+  if (scope) {
+    const scopes = scope.split(/[\s+]+/).filter(Boolean);
+    if (scopes.length > 10) {
+      out.push({ level: "warn", msg: `Requesting ${scopes.length} scopes. Large scope sets may indicate over-privileged requests; consider asking for only what's needed.` });
+    }
+  }
+
+  // error
+  if (query.has("error") || fragment.has("error")) {
+    const err = query.get("error") || fragment.get("error");
+    const desc = query.get("error_description") || fragment.get("error_description") || "";
+    out.push({ level: "err", msg: `Error response: ${err}${desc ? " — " + desc : ""}` });
+  }
+
+  return out;
+}
+
+$("decode-btn").addEventListener("click", decode);
+$("clear-btn").addEventListener("click", () => {
+  $("url-input").value = "";
+  $("results").classList.remove("show");
+  $("error-box").innerHTML = "";
+});
+
+$("sample-auth").addEventListener("click", () => {
+  $("url-input").value = "https://accounts.example.com/oauth/authorize?client_id=abc123&redirect_uri=https://app.example.com/callback&response_type=code&scope=openid+email+profile&state=Hzs2yRm7nQp_xLdK&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256&nonce=n-0S6_WzA2Mj";
+});
+$("sample-callback").addEventListener("click", () => {
+  $("url-input").value = "https://app.example.com/callback?code=AQABCDEF1234567890_xyz&state=Hzs2yRm7nQp_xLdK&iss=https%3A%2F%2Faccounts.example.com";
+});
+$("sample-token").addEventListener("click", () => {
+  $("url-input").value = "https://app.example.com/callback#access_token=ya29.a0AfH6SMB...&token_type=Bearer&expires_in=3599&scope=openid%20email&state=abc123";
+});
+
+setTheme(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+</script>
+</body>
+</html>
